@@ -1,0 +1,16 @@
+[project]
+name = "ifc-audit"
+version = "0.1.0"
+description = "Audit, inspect, navigate and export IFC issues in Blender + Bonsai"
+authors = [
+    {name = "IfcAddict"},
+    {name = "AGR Digital Building"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+    "ifcopenshell",
+]
+
+[tool.ruff]
+line-length = 100
