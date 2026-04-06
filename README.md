@@ -3,7 +3,7 @@
 ![Blender](https://img.shields.io/badge/Blender-4.x%20%7C%205.x-orange)
 ![IFC](https://img.shields.io/badge/IFC-OpenBIM-blue)
 ![Status](https://img.shields.io/badge/status-active-success)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+![License](https://img.shields.io/badge/license-GPLv3-lightgrey)
 
 Blender + Bonsai addon for **analyzing, validating, and improving the quality of IFC models** from a structural, semantic, and geometric perspective.
 
@@ -91,12 +91,14 @@ IFC Audit is not a viewer. It is a tool to:
 
 ---
 
-## Credits and References
+## Credits, References and License
 
 This project is an evolution and adaptation for Blender/Bonsai of the original work by **AGR Digital Building**.
+Due to its integration with the Blender Python API, this project is distributed under the **GNU GPLv3** license.
 
-- **Original Base Code:** [IFC_Auditor](https://github.com/AGRDIGITALBUSSINES/IFC_Auditor) by [AGR Digital Building](https://agrdb.com).
-- **Original Author:** Andrés G. Rodríguez.
-- **License:** MIT License.
+**Original Base Logic Acknowledgment:**
+Portions of the core logic in this software are based on the original work by AGR Digital Building, which is licensed under the MIT License. You can find the original base logic here:
+- **Original Base Code:** [IFC_Auditor](https://github.com/AGRDIGITALBUSSINES/IFC_Auditor)
+- **Original Author:** Andrés G. Rodríguez (AGR Digital Building, https://agrdb.com).
 
-Thanks to AGR Digital Building for their contribution to the BIM community and for laying the logical foundation of this audit tool.
+Thanks to AGR Digital Building for their fantastic contribution to the open BIM community and for laying the logical foundation of this audit tool.
