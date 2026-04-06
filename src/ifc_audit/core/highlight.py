@@ -63,13 +63,13 @@ def _ensure_material(name: str, color, alpha: float):
 
 def _heavy_brep_color(issue_group_name: str, prefs):
     label = issue_group_name or ""
-    if "Muy alto" in label:
-        return getattr(prefs, "color_brep_very_high", (1.0, 0.15, 0.15)), _MATERIAL_NAMES["heavy_brep_very_high"]
-    if "Alto" in label:
-        return getattr(prefs, "color_brep_high", (1.0, 0.50, 0.15)), _MATERIAL_NAMES["heavy_brep_high"]
-    if "Medio" in label:
-        return getattr(prefs, "color_brep_medium", (1.0, 0.90, 0.15)), _MATERIAL_NAMES["heavy_brep_medium"]
-    return getattr(prefs, "color_brep_low", (0.80, 0.80, 0.25)), _MATERIAL_NAMES["heavy_brep_low"]
+    if "Very High" in label:
+        return getattr(prefs, "color_brep_very_high", (1.0, 0.0, 0.0)), _MATERIAL_NAMES["heavy_brep_very_high"]
+    if "High" in label:
+        return getattr(prefs, "color_brep_high", (1.0, 0.75, 0.0)), _MATERIAL_NAMES["heavy_brep_high"]
+    if "Medium" in label:
+        return getattr(prefs, "color_brep_medium", (0.0, 0.0, 0.0)), _MATERIAL_NAMES["heavy_brep_medium"]
+    return getattr(prefs, "color_brep_low", (0.0, 1.0, 0.0)), _MATERIAL_NAMES["heavy_brep_low"]
 
 def _highlight_color_for_issue(issue_type: str, prefs, payload: dict | None = None):
     if issue_type == "heavy_brep":

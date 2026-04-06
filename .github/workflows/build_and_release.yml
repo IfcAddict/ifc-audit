@@ -1,0 +1,89 @@
+name: Build and Release IFC Audit
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Package Add-on
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ifcopenshell
+
+      - name: Run logic validation
+        run: |
+          # Verify the core logic can be imported and initialized without Blender
+          python3 tests/cli_test_audit.py
+
+      - name: Create ZIP package
+        run: |
+          cd src
+          zip -r ../ifc_audit.zip ifc_audit -x "*.pyc" "__pycache__/*" ".DS_Store"
+          cd ..
+
+      - name: Upload Artifact
+        if: startsWith(github.ref, 'refs/tags/') != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: ifc-audit-pre-release
+          path: ifc_audit.zip
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract Changelog Section
+        id: changelog_reader
+        run: |
+          # Get version from tag (v0.1.0 -> 0.1.0)
+          VERSION=$(echo ${{ github.ref_name }} | sed 's/v//')
+          echo "Extracting notes for version $VERSION"
+          
+          # This script extracts the text between the version header and the next header or end of file
+          sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '1d;$d' > release_notes.md
+          
+          # If the file is empty (e.g. it was the last version in the file), try to get from version to end
+          if [ ! -s release_notes.md ]; then
+            sed -n "/## \[$VERSION\]/,\$p" CHANGELOG.md | sed '1d' > release_notes.md
+          fi
+          
+          echo "Release notes generated:"
+          cat release_notes.md
+
+      - name: Download Build
+        uses: actions/download-artifact@v4 # This won't work if build didn't upload, but we reuse the zip logic
+        # Actually, it's safer to rebuild the zip in the release job or use the built file properly
+        # For simplicity, let's just rebuild the zip here as it's very fast
+        
+      - name: Re-create ZIP for release
+        run: |
+          cd src
+          zip -r ../ifc_audit_${{ github.ref_name }}.zip ifc_audit -x "*.pyc" "__pycache__/*" ".DS_Store"
+          cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release_notes.md
+          files: ifc_audit_${{ github.ref_name }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -13,7 +13,12 @@ class IFCIssueItem(bpy.types.PropertyGroup):
     level: bpy.props.IntProperty(default=0)
 
 class IFCAuditorProperties(bpy.types.PropertyGroup):
-    filepath: bpy.props.StringProperty(name="IFC File (fallback)", subtype='FILE_PATH', default="")
+    use_active_ifc: bpy.props.BoolProperty(
+        name="Use active IFC in memory",
+        description="If checked, uses the model currently loaded in Bonsai. If unchecked, uses the file below",
+        default=True
+    )
+    filepath: bpy.props.StringProperty(name="IFC File Path", subtype='FILE_PATH', default="")
     status: bpy.props.StringProperty(name="Status", default="Ready")
     audit_cache: bpy.props.StringProperty(name="Resultados JSON", default="")
     issue_filter: bpy.props.EnumProperty(

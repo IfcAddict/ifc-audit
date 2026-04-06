@@ -17,6 +17,16 @@ def get_model():
     except Exception:
         return None
 
+def get_file_path():
+    tool = get_bonsai_tool()
+    if tool is None:
+        return None
+    try:
+        # Bonsai/BlenderBIM usually provides a tool to get the active project path
+        return tool.Ifc.get_path()
+    except Exception:
+        return None
+
 def clear_selection():
     try:
         bpy.ops.object.select_all(action='DESELECT')

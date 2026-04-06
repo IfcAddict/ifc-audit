@@ -10,13 +10,28 @@ import ifcopenshell
 import ifcopenshell.util.element as util_element
 
 from .rules import REQUIRED_PROPERTIES, SPATIAL_ELEMENT_EXCLUSIONS
-from .selectors import get_model
+from .logger import get_logger
+
+logger = get_logger()
 
 class IFCAuditor:
     def __init__(self, model=None, filepath: str | None = None):
         self.model = model
         self.filepath = filepath
         self.file_size_mb = None
+        
+        # If no model is provided, try to load it from filepath
+        if not self.model and self.filepath and os.path.exists(self.filepath):
+            try:
+                self.model = ifcopenshell.open(self.filepath)
+            except Exception as e:
+                logger.error(f"Could not load IFC from {self.filepath}: {e}")
+
+        # If still no model, only then try to use the Blender environment if available
+        if not self.model:
+            self._try_load_from_blender()
+
+        self._set_filesize_if_possible()
         self.results = {
             "summary": {},
             "inventory": {},
@@ -40,19 +55,45 @@ class IFCAuditor:
             return cls(model=model, filepath=filepath)
         if filepath and os.path.exists(filepath):
             model = ifcopenshell.open(filepath)
+            logger.info(f"Loaded IFC model from file: {filepath}")
             return cls(model=model, filepath=filepath)
-        raise RuntimeError("No active IFC model in Bonsai and no valid IFC path provided.")
+        
+        msg = "No active IFC model in Bonsai and no valid IFC path provided."
+        logger.error(msg)
+        raise RuntimeError(msg)
+
+    def _try_load_from_blender(self):
+        try:
+            # Lazy import to avoid bpy/bonsai dependencies in standalone mode
+            from ..blender.selectors import get_model, get_file_path
+            self.model = get_model()
+            if not self.filepath:
+                self.filepath = get_file_path()
+            if self.model:
+                logger.info("Retrieved active IFC model from Blender/Bonsai")
+        except ImportError:
+            # Not running inside Blender or module not found
+            pass
+        except Exception as e:
+            logger.debug(f"Failed to auto-load from Blender: {e}")
 
     def _set_filesize_if_possible(self):
         if self.filepath and os.path.exists(self.filepath):
             self.file_size_mb = round(os.path.getsize(self.filepath) / (1024 * 1024), 2)
 
     def analyze_inventory(self):
-        counts = Counter(entity.is_a() for entity in self.model)
+        logger.info("Analyzing model inventory (geometric only)...")
+        # Only consider IfcProducts that have a defined Representation
+        geometric_entities = [
+            e.is_a() for e in self.model.by_type("IfcProduct")
+            if getattr(e, "Representation", None) is not None
+        ]
+        counts = Counter(geometric_entities)
         self.results["inventory"] = dict(sorted(counts.items(), key=lambda x: x[1], reverse=True))
         return self.results["inventory"]
 
     def rule_empty_psets(self):
+        logger.info("Running rule: Empty Property Sets...")
         empty = []
         total = 0
         duplicate_names = Counter()
@@ -73,7 +114,8 @@ class IFCAuditor:
         return empty
 
     def rule_orphans(self):
-        orphans = []
+        logger.info("Running rule: Orphans...")
+        grouped = {}
         for product in self.model.by_type("IfcProduct"):
             if product.is_a() in SPATIAL_ELEMENT_EXCLUSIONS:
                 continue
@@ -93,18 +135,28 @@ class IFCAuditor:
                 )
 
                 severity = "warning" if has_rel else "error"
+                ifc_type = product.is_a()
+                
+                if ifc_type not in grouped:
+                    grouped[ifc_type] = {
+                        "type": ifc_type,
+                        "elements": []
+                    }
 
-                orphans.append({
+                grouped[ifc_type]["elements"].append({
                     "id": product.id(),
-                    "type": product.is_a(),
+                    "type": ifc_type,
                     "name": getattr(product, "Name", None) or f"Elem_{product.id()}",
                     "severity": severity,
                 })
 
-        self.results["issues"]["orphans"] = orphans
-        return orphans
+        result = list(grouped.values())
+        result.sort(key=lambda x: len(x["elements"]), reverse=True)
+        self.results["issues"]["orphans"] = result
+        return result
 
     def rule_unused_types(self):
+        logger.info("Running rule: Unused Types...")
         unused = []
         for ifc_type in self.model.by_type("IfcTypeObject"):
             used = False
@@ -137,6 +189,7 @@ class IFCAuditor:
         return unused
 
     def rule_duplicate_guids(self):
+        logger.info("Running rule: Duplicate GUIDs...")
         guid_map = defaultdict(list)
         for entity in self.model:
             guid = getattr(entity, "GlobalId", None)
@@ -159,6 +212,7 @@ class IFCAuditor:
         return duplicates
 
     def rule_missing_properties(self):
+        logger.info("Running rule: Missing Properties...")
         grouped = {}
 
         def has_property(element, prop_name):
@@ -209,6 +263,7 @@ class IFCAuditor:
         return count
 
     def rule_heavy_brep(self):
+        logger.info("Running rule: Heavy BRep...")
         elements = []
 
         for elem in self.model.by_type("IfcProduct"):
@@ -248,13 +303,13 @@ class IFCAuditor:
         for e in elements:
             f = e["faces"]
             if f > 1000:
-                groups["Muy alto (>1000)"].append(e)
+                groups["Very High (>1000)"].append(e)
             elif f > 500:
-                groups["Alto (500-1000)"].append(e)
+                groups["High (500-1000)"].append(e)
             elif f > 100:
-                groups["Medio (100-500)"].append(e)
+                groups["Medium (100-500)"].append(e)
             else:
-                groups["Bajo (<100)"].append(e)
+                groups["Low (<100)"].append(e)
 
         result = [{"group": k, "elements": v} for k, v in groups.items() if v]
         self.results["issues"]["heavy_brep"] = result
@@ -273,8 +328,8 @@ class IFCAuditor:
         total_entities = sum(self.results["inventory"].values())
         issues = self.results["issues"]
         total_issues = (
+            sum(len(g.get("elements", [])) for g in issues["orphans"]) +
             len(issues["empty_psets"]) +
-            len(issues["orphans"]) +
             len(issues["unused_types"]) +
             len(issues["duplicate_guids"]) +
             len(issues["missing_properties"]) +
@@ -288,7 +343,7 @@ class IFCAuditor:
             "total_entities": total_entities,
             "total_issues": total_issues,
             "empty_psets": len(issues["empty_psets"]),
-            "orphans": len(issues["orphans"]),
+            "orphans": sum(len(g.get("elements", [])) for g in issues["orphans"]),
             "unused_types": len(issues["unused_types"]),
             "duplicate_guids": len(issues["duplicate_guids"]),
             "missing_properties": len(issues["missing_properties"]),
@@ -297,6 +352,7 @@ class IFCAuditor:
         return self.results["summary"]
 
     def run(self):
+        logger.info("Starting full audit process...")
         self.analyze_inventory()
         self.rule_empty_psets()
         self.rule_orphans()
@@ -306,11 +362,16 @@ class IFCAuditor:
         self.rule_heavy_brep()
         self.rule_geometry()
         self.build_summary()
+        logger.info(f"Audit complete. Total issues found: {self.results['summary']['total_issues']}")
         return self.results
 
     def get_issue_ids(self, category: str):
         issues = self.results.get("issues", {}).get(category, [])
         ids = []
+        if category == "orphans":
+            for item in issues:
+                ids.extend(e["id"] for e in item.get("elements", []))
+            return ids
         if category == "duplicate_guids":
             for item in issues:
                 ids.extend(item.get("ids", []))

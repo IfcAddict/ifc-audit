@@ -66,9 +66,11 @@ class IFC_PT_auditor_panel(bpy.types.Panel):
         props = scene.ifc_auditor_props
 
         box = layout.box()
-        box.label(text="Model Source")
-        box.label(text="Prioritizes active IFC in Bonsai")
-        box.prop(props, "filepath")
+        box.label(text="Model Source", icon='WORLD_DATA')
+        box.prop(props, "use_active_ifc")
+        if not props.use_active_ifc:
+            box.prop(props, "filepath", text="Select IFC File")
+        
         box.operator("ifc_auditor.run_audit", icon='VIEWZOOM')
 
         box = layout.box()
@@ -130,8 +132,9 @@ class IFC_PT_auditor_panel(bpy.types.Panel):
         box.prop(props, "clean_empty_psets")
         box.prop(props, "clean_unused_types")
         row = box.row(align=True)
-        row.operator("ifc_auditor.export_report", icon='TEXT')
-        row.operator("ifc_auditor.export_clean_copy", icon='FILE_TICK')
+        row.operator("ifc_auditor.export_report", icon='TEXT', text="JSON")
+        row.operator("ifc_auditor.export_html_report", icon='FILE_TEXT', text="HTML Report")
+        row.operator("ifc_auditor.export_clean_copy", icon='FILE_TICK', text="Clean IFC")
 
         layout.separator()
         layout.label(text=f"Status: {props.status}", icon='INFO')

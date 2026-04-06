@@ -72,7 +72,7 @@ class IFCAuditorPreferences(bpy.types.AddonPreferences):
         size=3,
         min=0.0,
         max=1.0,
-        default=(1.00, 0.15, 0.15),
+        default=(1.00, 0.00, 0.00),
     )
 
     color_brep_high: bpy.props.FloatVectorProperty(
@@ -81,7 +81,7 @@ class IFCAuditorPreferences(bpy.types.AddonPreferences):
         size=3,
         min=0.0,
         max=1.0,
-        default=(1.00, 0.50, 0.15),
+        default=(1.00, 0.75, 0.00),
     )
 
     color_brep_medium: bpy.props.FloatVectorProperty(
@@ -90,7 +90,7 @@ class IFCAuditorPreferences(bpy.types.AddonPreferences):
         size=3,
         min=0.0,
         max=1.0,
-        default=(1.00, 0.90, 0.15),
+        default=(0.00, 0.00, 0.00),
     )
 
     color_brep_low: bpy.props.FloatVectorProperty(
@@ -99,7 +99,7 @@ class IFCAuditorPreferences(bpy.types.AddonPreferences):
         size=3,
         min=0.0,
         max=1.0,
-        default=(0.80, 0.80, 0.25),
+        default=(0.00, 1.00, 0.00),
     )
 
     def draw(self, context):
