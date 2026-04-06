@@ -1,7 +1,7 @@
 bl_info = {
     "name": "IFC Audit",
     "author": "IfcAddict (Adaptation) + AGR Digital Building (Base Logic)",
-    "version": (0, 2, 0),
+    "version": (0, 2, 1),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > IFC",
     "description": "Audit, inspect, navigate and export IFC issues in Blender + Bonsai",

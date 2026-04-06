@@ -12,8 +12,7 @@ from ..core.highlight import apply_ghost_highlight, restore_visual
 from ..core.logger import get_logger
 from ..core.reporter import HTMLReporter
 import webbrowser
-import os
-
+from datetime import datetime
 logger = get_logger()
 
 def update_props_from_results(props, results):
