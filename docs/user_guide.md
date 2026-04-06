@@ -9,10 +9,11 @@ This guide explains how to use the validation tools in **IFC Audit** within Blen
 For best results, follow this order:
 
 1.  **Load the Model**: Ensure you have an active IFC model in **Bonsai** (BlenderBIM) or specify a local file path.
+    - *Tip:* You can also run the audit without Blender using the CLI script.
 2.  **Initial Analysis**: Click the **"Run Audit"** button in the sidebar (N-key > `IFC` tab).
 3.  **Visual Inspection**: Navigate through the issue tree. Use **Ghost Mode** to isolate problems.
 4.  **Direct Cleanup**: Execute cleanup actions (like removing empty PSets) if the model allows.
-5.  **Export**: Generate a JSON report or an optimized IFC copy to share with the team.
+5.  **Export**: Generate a detailed HTML report, a JSON report, or an optimized IFC copy to share with the team.
 
 ---
 
@@ -35,6 +36,9 @@ A critical integrity rule. Two elements should not have the same Global Identifi
 ### 5. Missing Properties
 Checks if key elements (Walls, Doors, Windows) have the mandatory technical properties defined in the project configuration (e.g., *FireRating*).
 
+### 6. Heavy BRep
+Analyzes geometric complexity by checking the face count of boundary representations (BReps). Visualizes elements as green, yellow, orange, or red based on weight.
+
 ---
 
 ## 👻 Ghost Mode and Visualization
@@ -50,5 +54,6 @@ To make the audit intuitive, **IFC Audit** uses temporary materials:
 
 ## 📁 Exporting Results
 
+- **HTML Report**: Automatically generates a professional report dashboard and saves it directly to your `Downloads/` folder, popping up in your default web browser instantly. It summarizes issues, shows entity inventory, and features detailed tables.
 - **Optimized IFC Copy**: Generates a new file automatically removing what you don't need (empty PSets, unused types).
 - **JSON Report**: Ideal for integrating with other data workflows or quality dashboards.

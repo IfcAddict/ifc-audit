@@ -11,14 +11,16 @@ The code follows a decoupled pattern to separate BIM analysis logic from the Ble
 ### 1. Central Engine (`src/ifc_audit/core/`)
 Fully independent from the UI. It uses **IfcOpenShell** to operate on IFC data.
 *   **`auditor.py`**: Contains the `IFCAuditor` class. Each rule is an independent method that returns a result dictionary compatible with JSON files.
-*   **`selectors.py`**: Responsible for identifying the active IFC model, either from the **Bonsai** environment or from external files.
 *   **`highlight.py`**: Translates the issues into Blender materials (`bpy.data.materials`) in a non-destructive way.
+*   **`reporter.py`**: Generates standalone HTML dashboards and reports out of the audit data.
+*   **`logger.py`**: Centralized dual-logging interface for Blender Console and persistent log files.
 
 ### 2. Blender Integration (`src/ifc_audit/blender/`)
 Components that strictly depend on the Blender API (`bpy`).
 *   **`panel.py`**: Builds the dynamic tree interface to navigate errors.
 *   **`operators.py`**: Bridge that connects user interactions in the panel with the logic in `core`.
 *   **`props.py`**: Defines the add-on's persistent data (`RNA properties`) for UI state.
+*   **`selectors.py`**: Responsible for identifying the active IFC model from the **Bonsai** environment context.
 
 ---
 
@@ -48,5 +50,19 @@ pip install ifcopenshell
 
 ---
 
-## 🧪 Unit Testing
+## 🧪 Testing and CLI
+
 It's recommended to use small synthetic IFC files (located in `tests/data/`) to validate new audit rules before testing them on large production models.
+
+Because the core logic is physically decoupled from `bpy`, you can test auditing on raw IFC files entirely outside of Blender by using the dedicated Python script:
+```bash
+python scripts/run_audit_cli.py tests/My_Model.ifc
+```
+
+---
+
+## 🚀 CI/CD Automation
+
+This repository uses **GitHub Actions** (`.github/workflows/build_and_release.yml`) to govern the delivery lifecycle:
+- On every push, changes are tested using `scripts/run_audit_cli.py`.
+- On pushing a new version tag (e.g., `v0.2.1`), the pipeline automatically builds `ifc_audit_v0.2.1.zip` and sets up a new GitHub Release with the corresponding release notes fetched from `CHANGELOG.md`.
