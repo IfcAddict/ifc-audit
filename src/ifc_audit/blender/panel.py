@@ -54,8 +54,8 @@ class IFC_UL_issue_list(bpy.types.UIList):
             col.label(text=item.description or LABEL_MAP.get(item.issue_type, item.issue_type), icon='BLANK1')
 
 class IFC_PT_auditor_panel(bpy.types.Panel):
-    bl_label = "IFC Audit v0.1.0"
-    bl_idname = "IFC_PT_auditor_panel_v010"
+    bl_label = "IFC Audit v0.2.1"
+    bl_idname = "IFC_PT_auditor_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'IFC'

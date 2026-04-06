@@ -50,17 +50,7 @@ class IFCAuditor:
 
     @classmethod
     def from_bonsai_or_file(cls, filepath: str | None = None):
-        model = get_model()
-        if model is not None:
-            return cls(model=model, filepath=filepath)
-        if filepath and os.path.exists(filepath):
-            model = ifcopenshell.open(filepath)
-            logger.info(f"Loaded IFC model from file: {filepath}")
-            return cls(model=model, filepath=filepath)
-        
-        msg = "No active IFC model in Bonsai and no valid IFC path provided."
-        logger.error(msg)
-        raise RuntimeError(msg)
+        return cls(filepath=filepath)
 
     def _try_load_from_blender(self):
         try:

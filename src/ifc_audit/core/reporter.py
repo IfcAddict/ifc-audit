@@ -11,10 +11,8 @@ class HTMLReporter:
         self.metadata = results.get("metadata", {})
 
     def _get_issue_count(self, key):
-        if key == "heavy_brep":
-            return sum(len(g.get("elements", [])) for g in self.issues.get("heavy_brep", []))
-        if key == "missing_properties":
-            return sum(len(g.get("elements", [])) for g in self.issues.get("missing_properties", []))
+        if key in ("heavy_brep", "missing_properties", "orphans"):
+            return sum(len(g.get("elements", [])) for g in self.issues.get(key, []))
         return len(self.issues.get(key, []))
 
     def generate(self, output_path: str):
@@ -74,7 +72,18 @@ class HTMLReporter:
         summary_html = f"""
         <div class="dashboard">
             <div class="card"><h3>Entities</h3><div class="value">{self.summary.get('total_entities', 0)}</div></div>
-            <div class="card error"><h3>Issues Found</h3><div class="value">{self.summary.get('total_issues', 0)}</div></div>
+            <div class="card error">
+                <h3>Issues Found</h3>
+                <div class="value">{self.summary.get('total_issues', 0)}</div>
+                <div style="font-size: 0.85rem; margin-top: 1rem; color: var(--text-main); line-height: 1.5;">
+                    <div><strong>{self._get_issue_count('orphans')}</strong> Orphans</div>
+                    <div><strong>{self._get_issue_count('empty_psets')}</strong> Empty PSets</div>
+                    <div><strong>{self._get_issue_count('unused_types')}</strong> Unused Types</div>
+                    <div><strong>{self._get_issue_count('duplicate_guids')}</strong> Duplicate GUIDs</div>
+                    <div><strong>{self._get_issue_count('missing_properties')}</strong> Missing Props</div>
+                    <div><strong>{self._get_issue_count('heavy_brep')}</strong> Heavy BRep</div>
+                </div>
+            </div>
             <div class="card"><h3>File Size</h3><div class="value">{self.summary.get('file_size_mb', 'N/A')} MB</div></div>
             <div class="card"><h3>Schema</h3><div class="value">{self.summary.get('schema', 'Unknown')}</div></div>
         </div>
@@ -105,6 +114,25 @@ class HTMLReporter:
         if self.issues.get("duplicate_guids"):
             rows = "".join([f"<tr><td>{d['guid']}</td><td>{d['count']}</td><td>{', '.join(map(str, d['ids']))}</td></tr>" for d in self.issues["duplicate_guids"]])
             issues_html += f"<div class='section'><h2>Duplicate GUIDs ({len(self.issues['duplicate_guids'])})</h2><table><thead><tr><th>GUID</th><th>Count</th><th>Elements (IDs)</th></tr></thead><tbody>{rows}</tbody></table></div>"
+
+        # Empty PSets
+        if self.issues.get("empty_psets"):
+            rows = "".join([f"<tr><td>{p['id']}</td><td>{p['name']}</td><td>{p['type']}</td></tr>" for p in self.issues["empty_psets"][:50]])
+            issues_html += f"<div class='section'><h2>Empty PSets ({self._get_issue_count('empty_psets')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>"
+
+        # Unused Types
+        if self.issues.get("unused_types"):
+            rows = "".join([f"<tr><td>{t['id']}</td><td>{t['name']}</td><td>{t['type']}</td></tr>" for t in self.issues["unused_types"][:50]])
+            issues_html += f"<div class='section'><h2>Unused Types ({self._get_issue_count('unused_types')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>"
+
+        # Missing Properties
+        if self.issues.get("missing_properties"):
+            rows = ""
+            for group in self.issues["missing_properties"]:
+                rows += f"<tr style='background: #f1f5f9; font-weight: bold;'><td colspan='4'>Required: {group['property']}</td></tr>"
+                for o in group["elements"][:20]:
+                    rows += f"<tr><td>{o['id']}</td><td>{o['name']}</td><td>{o['type']}</td><td><span class='badge error'>Missing</span></td></tr>"
+            issues_html += f"<div class='section'><h2>Missing Properties ({self._get_issue_count('missing_properties')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Heavy BRep
         if self.issues.get("heavy_brep"):
@@ -137,7 +165,7 @@ class HTMLReporter:
                         <div class="timestamp">File: {self.summary.get('file', 'Model')} | Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
                     </div>
                     <div>
-                        <span class="badge" style="background: var(--primary); color: white;">v0.1.0</span>
+                        <span class="badge" style="background: var(--primary); color: white;">v0.2.1</span>
                     </div>
                 </header>
 
