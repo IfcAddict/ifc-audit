@@ -9,11 +9,36 @@ This guide explains how to use the validation tools in **IFC Audit** within Blen
 For best results, follow this order:
 
 1.  **Load the Model**: Ensure you have an active IFC model in **Bonsai** (BlenderBIM) or specify a local file path.
-    - *Tip:* You can also run the audit without Blender using the CLI script.
+    - *Tip:* You can also run the audit without Blender using the **CLI mode**.
 2.  **Initial Analysis**: Click the **"Run Audit"** button in the sidebar (N-key > `IFC` tab).
 3.  **Visual Inspection**: Navigate through the issue tree. Use **Ghost Mode** to isolate problems.
 4.  **Direct Cleanup**: Execute cleanup actions (like removing empty PSets) if the model allows.
 5.  **Export**: Generate a detailed HTML report, a JSON report, or an optimized IFC copy to share with the team.
+
+---
+
+## 💻 Standalone CLI Mode
+
+For automated workflows or to run an audit without opening Blender, you can use the standalone CLI script. This is ideal for batch processing or quick validations during the coordination phase.
+
+### Prerequisites
+- Python 3.10+ installed.
+- `ifcopenshell` library installed in your environment:
+  ```bash
+  pip install ifcopenshell
+  ```
+
+### Usage
+Run the script from the terminal, passing the path to the IFC file as an argument:
+
+```bash
+python3 scripts/run_audit_cli.py "path/to/your/model.ifc"
+```
+
+### Features & Output
+- **Full Analysis**: Executes all audit rules (Orphans, PSets, Unused Types, etc.).
+- **Automatic Report**: Generates a professional HTML report exactly like the one in Blender.
+- **Save Location**: Reports are automatically saved to your system's **Downloads** folder with a timestamped name (e.g., `Standalone_Audit_ModelName_20240522_1230.html`).
 
 ---
 

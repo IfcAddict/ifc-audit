@@ -76,6 +76,11 @@ IFC Audit is not a viewer. It is a tool to:
 - Detection of `IfcFacetedBrep` and `IfcAdvancedBrep`.
 - Complexity calculation based on face count.
 
+### Standalone CLI Mode
+- Run audits without Blender or Bonsai.
+- Automated HTML report generation to system Downloads.
+- Ideal for batch processing and CI/CD pipelines.
+
 ---
 
 ## Installation
@@ -83,11 +88,23 @@ IFC Audit is not a viewer. It is a tool to:
 ### Requirements
 - Blender 4.x or 5.x.
 - Bonsai installed.
+- Python 3.10+ (for CLI mode).
 
 ### Steps
 1. Download the repository as a `.zip`.
 2. In Blender: `Edit > Preferences > Add-ons > Install...`.
 3. Select the downloaded file and enable: **IFC Audit**.
+
+---
+
+## ⚡ Quick Start (CLI)
+
+If you have `ifcopenshell` installed, you can run an audit immediately from your terminal:
+
+```bash
+python3 scripts/run_audit_cli.py "path/to/your/model.ifc"
+```
+The report will be waiting for you in your **Downloads** folder.
 
 ---
 
