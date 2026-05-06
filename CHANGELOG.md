@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-05-06
+
+### Fixed
+- **Data Integrity:** `clean` operation now safely removes inverse relationships (`IfcRelDefinesByProperties`, `IfcRelDefinesByType`) before deleting entities to prevent IFC corruption.
+- **Security (XSS):** Dynamically generated HTML reports now escape all IFC string values using `html.escape()`.
+- **UI Lag & Performance:** Replaced the use of Blender's `StringProperty` for storing huge JSON strings with global Python state, eliminating lag on large models.
+- **Ghost Mode Bugs:** Fixed a bug where non-IFC MESH objects in the scene were incorrectly affected by Ghost Mode. Materials are now tracked by internal object pointers instead of string names to survive renaming. Ghost materials are cleanly purged upon restoring visualization.
+
+### Changed
+- **HTML Export Path:** HTML report generation now uses Blender's native file browser, allowing the user to pick the export directory instead of forcing it to `Downloads/`.
+- **Performance:** Dramatically optimized `rule_missing_properties` to `O(N)` via sets, speeding up audits on massive files.
+
 ## [0.2.1] - 2026-04-06
 
 ### Fixed

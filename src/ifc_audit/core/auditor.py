@@ -65,7 +65,7 @@ class IFCAuditor:
             # Not running inside Blender or module not found
             pass
         except Exception as e:
-            logger.debug(f"Failed to auto-load from Blender: {e}")
+            logger.debug("Failed to auto-load from Blender: %s", e)
 
     def _set_filesize_if_possible(self):
         if self.filepath and os.path.exists(self.filepath):
@@ -114,7 +114,8 @@ class IFCAuditor:
 
             try:
                 container = util_element.get_container(product)
-            except Exception:
+            except Exception as e:
+                logger.debug("Error getting container for product %s: %s", product.id(), e)
                 container = None
 
             if not container:
@@ -157,8 +158,8 @@ class IFCAuditor:
                         if rel and hasattr(rel, "RelatedObjects") and rel.RelatedObjects:
                             used = True
                             break
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Error checking Types relationship for type %s: %s", ifc_type.id(), e)
 
             try:
                 if not used and hasattr(ifc_type, "ObjectTypeOf") and ifc_type.ObjectTypeOf:
@@ -166,8 +167,8 @@ class IFCAuditor:
                         if rel and hasattr(rel, "RelatedObjects") and rel.RelatedObjects:
                             used = True
                             break
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Error checking ObjectTypeOf relationship for type %s: %s", ifc_type.id(), e)
 
             if not used:
                 unused.append({
@@ -205,21 +206,19 @@ class IFCAuditor:
         logger.info("Running rule: Missing Properties...")
         grouped = {}
 
-        def has_property(element, prop_name):
-            if not hasattr(element, "IsDefinedBy"):
-                return False
-            for rel in element.IsDefinedBy:
-                if rel.is_a("IfcRelDefinesByProperties"):
-                    pset = rel.RelatingPropertyDefinition
-                    if pset.is_a("IfcPropertySet"):
-                        for prop in pset.HasProperties:
-                            if prop.Name == prop_name:
-                                return True
-            return False
-
         for ifc_type, props in REQUIRED_PROPERTIES.items():
             for elem in self.model.by_type(ifc_type):
-                missing = [p for p in props if not has_property(elem, p)]
+                existing_props = set()
+                if hasattr(elem, "IsDefinedBy"):
+                    for rel in elem.IsDefinedBy:
+                        if rel.is_a("IfcRelDefinesByProperties"):
+                            pset = rel.RelatingPropertyDefinition
+                            if pset and pset.is_a("IfcPropertySet") and pset.HasProperties:
+                                for prop in pset.HasProperties:
+                                    if hasattr(prop, "Name"):
+                                        existing_props.add(prop.Name)
+                
+                missing = [p for p in props if p not in existing_props]
                 for prop in missing:
                     if prop not in grouped:
                         grouped[prop] = {
@@ -248,8 +247,8 @@ class IFCAuditor:
                 shell = getattr(item, "Outer", None)
                 if shell and hasattr(shell, "Faces"):
                     count += len(shell.Faces)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Error counting BRep faces for item %s: %s", item.id(), e)
         return count
 
     def rule_heavy_brep(self):
@@ -270,7 +269,9 @@ class IFCAuditor:
                         if item.is_a("IfcFacetedBrep") or item.is_a("IfcAdvancedBrep"):
                             is_brep = True
                             total_faces += self._count_brep_faces(item)
-                    except Exception:
+                    except Exception as e:
+                        item_id = getattr(item, "id", lambda: "Unknown")() if hasattr(item, "id") else "Unknown"
+                        logger.debug("Error checking BRep representations for item %s: %s", item_id, e)
                         continue
 
             if is_brep and total_faces > 0:
@@ -382,23 +383,38 @@ class IFCAuditor:
     def clean(self, options: dict):
         removed = 0
         if options.get("empty_psets"):
-            for pset in self.results.get("issues", {}).get("empty_psets", []):
-                ent = self.model.by_id(pset["id"])
+            for pset_info in self.results.get("issues", {}).get("empty_psets", []):
+                ent = self.model.by_id(pset_info["id"])
                 if ent:
                     try:
+                        # Remove reverse relationships first to prevent IFC corruption
+                        if hasattr(ent, "DefinesOcurrence") and ent.DefinesOcurrence:
+                            for rel in list(ent.DefinesOcurrence):
+                                self.model.remove(rel)
+                        if hasattr(ent, "DefinesOccurrence") and ent.DefinesOccurrence:
+                            for rel in list(ent.DefinesOccurrence):
+                                self.model.remove(rel)
                         self.model.remove(ent)
                         removed += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Error removing empty PSet %s: %s", pset_info["id"], e)
+                        
         if options.get("unused_types"):
-            for type_item in self.results.get("issues", {}).get("unused_types", []):
-                ent = self.model.by_id(type_item["id"])
+            for type_info in self.results.get("issues", {}).get("unused_types", []):
+                ent = self.model.by_id(type_info["id"])
                 if ent:
                     try:
+                        # Remove reverse relationships
+                        if hasattr(ent, "Types") and ent.Types:
+                            for rel in list(ent.Types):
+                                self.model.remove(rel)
+                        if hasattr(ent, "ObjectTypeOf") and ent.ObjectTypeOf:
+                            for rel in list(ent.ObjectTypeOf):
+                                self.model.remove(rel)
                         self.model.remove(ent)
                         removed += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug("Error removing unused type %s: %s", type_info["id"], e)
         return removed
 
     def export_clean_copy(self, output_path: str, options: dict):

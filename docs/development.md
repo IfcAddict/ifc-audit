@@ -19,7 +19,7 @@ Fully independent from the UI. It uses **IfcOpenShell** to operate on IFC data.
 Components that strictly depend on the Blender API (`bpy`).
 *   **`panel.py`**: Builds the dynamic tree interface to navigate errors.
 *   **`operators.py`**: Bridge that connects user interactions in the panel with the logic in `core`.
-*   **`props.py`**: Defines the add-on's persistent data (`RNA properties`) for UI state.
+*   **`props.py`**: Defines the add-on's persistent data (`RNA properties`) for UI state. It also contains the `AUDIT_CACHE` and `UI_FLAT_LIST` global dictionaries to bypass Blender's `StringProperty` length limits and prevent UI lag on massive models.
 *   **`selectors.py`**: Responsible for identifying the active IFC model from the **Bonsai** environment context.
 
 ---

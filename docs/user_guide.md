@@ -38,7 +38,7 @@ python3 scripts/run_audit_cli.py "path/to/your/model.ifc"
 ### Features & Output
 - **Full Analysis**: Executes all audit rules (Orphans, PSets, Unused Types, etc.).
 - **Automatic Report**: Generates a professional HTML report exactly like the one in Blender.
-- **Save Location**: Reports are automatically saved to your system's **Downloads** folder with a timestamped name (e.g., `Standalone_Audit_ModelName_20240522_1230.html`).
+- **Save Location**: For CLI, reports are automatically saved to your system's **Downloads** folder with a timestamped name (e.g., `Standalone_Audit_ModelName_20240522_1230.html`). Within Blender, you can use the file browser to select the exact save location.
 
 ---
 
@@ -79,6 +79,6 @@ To make the audit intuitive, **IFC Audit** uses temporary materials:
 
 ## 📁 Exporting Results
 
-- **HTML Report**: Automatically generates a professional report dashboard and saves it directly to your `Downloads/` folder, popping up in your default web browser instantly. It summarizes issues, shows entity inventory, and features detailed tables.
+- **HTML Report**: Generates a professional report dashboard. A file browser dialogue will prompt you for a save location, and after saving, it pops up in your default web browser instantly. It summarizes issues, shows entity inventory, and features detailed tables.
 - **Optimized IFC Copy**: Generates a new file automatically removing what you don't need (empty PSets, unused types).
 - **JSON Report**: Ideal for integrating with other data workflows or quality dashboards.

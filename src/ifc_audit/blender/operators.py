@@ -25,7 +25,11 @@ def update_props_from_results(props, results):
     props.duplicate_guids = summary.get("duplicate_guids", 0)
     props.missing_props = summary.get("missing_properties", 0)
     props.heavy_brep = summary.get("heavy_brep", 0)
-    props.audit_cache = json.dumps(results, ensure_ascii=False)
+    
+    from .props import AUDIT_CACHE
+    AUDIT_CACHE.clear()
+    AUDIT_CACHE.update(results)
+    props.has_audit_cache = True
 
 def _get_addon_prefs(context):
     addon_name = __package__.split('.')[0]
@@ -44,6 +48,9 @@ def fill_ui_tree(context, results):
 
     issues = results.get("issues", {})
     allowed = _visible_children_for_filter(props.issue_filter)
+    
+    from .props import UI_FLAT_LIST
+    UI_FLAT_LIST.clear()
 
     def add_leaf(name, issue_type, payload, ifc_id=-1, description="", level=0, is_group=False, parent_id=-1):
         row = scene.ifc_auditor_issues.add()
@@ -51,7 +58,10 @@ def fill_ui_tree(context, results):
         row.name = name
         row.issue_type = issue_type
         row.description = description
-        row.payload_json = json.dumps(payload, ensure_ascii=False)
+        
+        UI_FLAT_LIST.append(payload)
+        row.payload_index = len(UI_FLAT_LIST) - 1
+        
         row.is_group = is_group
         row.is_expanded = False
         row.parent_id = parent_id
@@ -151,10 +161,11 @@ def fill_ui_tree(context, results):
 
 def refresh_issue_list(context):
     props = context.scene.ifc_auditor_props
-    if not props.audit_cache:
+    if not props.has_audit_cache:
         context.scene.ifc_auditor_issues.clear()
         return
-    fill_ui_tree(context, json.loads(props.audit_cache))
+    from .props import AUDIT_CACHE
+    fill_ui_tree(context, AUDIT_CACHE)
 
 class IFC_OT_run_audit(bpy.types.Operator):
     bl_idname = "ifc_auditor.run_audit"
@@ -203,7 +214,7 @@ class IFC_OT_show_issue_category(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.ifc_auditor_props
-        if not props.audit_cache:
+        if not props.has_audit_cache:
             self.report({'WARNING'}, "Run the audit first")
             return {'CANCELLED'}
         props.issue_filter = self.category
@@ -238,7 +249,8 @@ class IFC_OT_select_active_issue(bpy.types.Operator):
 
         index = min(max(scene.ifc_auditor_issues_index, 0), len(scene.ifc_auditor_issues) - 1)
         item = scene.ifc_auditor_issues[index]
-        payload = json.loads(item.payload_json) if item.payload_json else {}
+        from .props import UI_FLAT_LIST
+        payload = UI_FLAT_LIST[item.payload_index] if 0 <= item.payload_index < len(UI_FLAT_LIST) else {}
         ids = []
 
         if item.is_group:
@@ -275,10 +287,11 @@ class IFC_OT_select_all_listed_issues(bpy.types.Operator):
 
     def execute(self, context):
         ids = []
+        from .props import UI_FLAT_LIST
         for item in context.scene.ifc_auditor_issues:
             if item.level > 0:
                 continue
-            payload = json.loads(item.payload_json) if item.payload_json else {}
+            payload = UI_FLAT_LIST[item.payload_index] if 0 <= item.payload_index < len(UI_FLAT_LIST) else {}
             if item.issue_type == "duplicate_guids":
                 ids.extend(payload.get("ids", []))
             elif item.issue_type in {"missing_properties", "heavy_brep"} and item.is_group:
@@ -311,12 +324,13 @@ class IFC_OT_export_report(bpy.types.Operator):
 
     def execute(self, context):
         props = context.scene.ifc_auditor_props
-        if not props.audit_cache:
+        if not props.has_audit_cache:
             self.report({'WARNING'}, "Run the audit first")
             return {'CANCELLED'}
         output = self.filepath or bpy.path.abspath("//ifc_audit_report.json")
+        from .props import AUDIT_CACHE
         with open(output, "w", encoding="utf-8") as f:
-            json.dump(json.loads(props.audit_cache), f, ensure_ascii=False, indent=2)
+            json.dump(AUDIT_CACHE, f, ensure_ascii=False, indent=2)
         props.status = f"Report exported to {output}"
         logger.info(f"Operator export_report: {props.status}")
         self.report({'INFO'}, props.status)
@@ -330,37 +344,34 @@ class IFC_OT_export_report(bpy.types.Operator):
 class IFC_OT_export_html_report(bpy.types.Operator):
     bl_idname = "ifc_auditor.export_html_report"
     bl_label = "Export HTML Report"
-    bl_description = "Generates and opens a visual HTML report in your Downloads folder"
+    bl_description = "Generates and opens a visual HTML report"
+
+    filepath: bpy.props.StringProperty(subtype="FILE_PATH")
+    filename_ext = ".html"
 
     def execute(self, context):
         props = context.scene.ifc_auditor_props
-        if not props.audit_cache:
+        if not props.has_audit_cache:
             self.report({'WARNING'}, "Run the audit first")
             return {'CANCELLED'}
         
         try:
-            results = json.loads(props.audit_cache)
-            summary = results.get("summary", {})
+            from .props import AUDIT_CACHE
             
-            # Generate automated path in Downloads
-            downloads_dir = os.path.join(os.path.expanduser("~"), "Downloads")
-            if not os.path.exists(downloads_dir):
-                os.makedirs(downloads_dir, exist_ok=True)
-            
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            model_name = os.path.splitext(summary.get("file", "Model"))[0]
-            filename = f"IFC_Audit_{model_name}_{timestamp}.html"
-            output = os.path.join(downloads_dir, filename)
+            output = self.filepath
+            if not output:
+                self.report({'ERROR'}, "No file path provided")
+                return {'CANCELLED'}
             
             # Create reporter and generate
-            reporter = HTMLReporter(results)
+            reporter = HTMLReporter(AUDIT_CACHE)
             reporter.generate(output)
             
             # Open automatically
             webbrowser.open(f"file://{output}")
             
-            props.status = f"Report saved to Downloads and opened"
-            logger.info(f"Operator export_html_report: {props.status} -> {output}")
+            props.status = f"Report saved and opened: {output}"
+            logger.info(f"Operator export_html_report: {props.status}")
             self.report({'INFO'}, props.status)
             return {'FINISHED'}
         except Exception as e:
@@ -368,6 +379,17 @@ class IFC_OT_export_html_report(bpy.types.Operator):
             logger.error(f"Operator export_html_report failed: {e}", exc_info=True)
             self.report({'ERROR'}, str(e))
             return {'CANCELLED'}
+
+    def invoke(self, context, event):
+        props = context.scene.ifc_auditor_props
+        from .props import AUDIT_CACHE
+        summary = AUDIT_CACHE.get("summary", {})
+        model_name = os.path.splitext(summary.get("file", "Model"))[0]
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        self.filepath = bpy.path.ensure_ext(bpy.path.abspath(f"//IFC_Audit_{model_name}_{timestamp}.html"), ".html")
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
 
 class IFC_OT_export_clean_copy(bpy.types.Operator):
     bl_idname = "ifc_auditor.export_clean_copy"
@@ -389,8 +411,9 @@ class IFC_OT_export_clean_copy(bpy.types.Operator):
 
         try:
             auditor = IFCAuditor.from_bonsai_or_file(filepath)
-            if props.audit_cache:
-                auditor.results = json.loads(props.audit_cache)
+            from .props import AUDIT_CACHE
+            if props.has_audit_cache and AUDIT_CACHE:
+                auditor.results = AUDIT_CACHE
             else:
                 auditor.run()
             stats = auditor.export_clean_copy(

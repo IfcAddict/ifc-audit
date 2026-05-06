@@ -1,5 +1,6 @@
 import json
 import os
+import html
 from datetime import datetime
 
 class HTMLReporter:
@@ -85,11 +86,11 @@ class HTMLReporter:
                 </div>
             </div>
             <div class="card"><h3>File Size</h3><div class="value">{self.summary.get('file_size_mb', 'N/A')} MB</div></div>
-            <div class="card"><h3>Schema</h3><div class="value">{self.summary.get('schema', 'Unknown')}</div></div>
+            <div class="card"><h3>Schema</h3><div class="value">{html.escape(str(self.summary.get('schema', 'Unknown')))}</div></div>
         </div>
         """
 
-        inventory_rows = "".join([f"<tr><td>{k}</td><td>{v}</td></tr>" for k, v in list(self.inventory.items())[:20]])
+        inventory_rows = "".join([f"<tr><td>{html.escape(str(k))}</td><td>{v}</td></tr>" for k, v in list(self.inventory.items())[:20]])
         inventory_html = f"""
         <div class="section">
             <h2>Model Inventory (Top 20)</h2>
@@ -104,34 +105,34 @@ class HTMLReporter:
             rows = ""
             for group in self.issues["orphans"]:
                 # Group header row
-                rows += f"<tr style='background: #f1f5f9; font-weight: bold;'><td colspan='4'>Type: {group['type']} ({len(group['elements'])})</td></tr>"
+                rows += f"<tr style='background: #f1f5f9; font-weight: bold;'><td colspan='4'>Type: {html.escape(str(group['type']))} ({len(group['elements'])})</td></tr>"
                 for o in group["elements"][:20]: # Limit elements per type to avoid massive reports
-                    rows += f"<tr><td>{o['id']}</td><td>{o['name']}</td><td>{o['type']}</td><td><span class='badge {o['severity']}'>{o['severity'].upper()}</span></td></tr>"
+                    rows += f"<tr><td>{o['id']}</td><td>{html.escape(str(o['name']))}</td><td>{html.escape(str(o['type']))}</td><td><span class='badge {o['severity']}'>{o['severity'].upper()}</span></td></tr>"
             
             issues_html += f"<div class='section'><h2>Orphans ({self._get_issue_count('orphans')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Severity</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Duplicate GUIDs
         if self.issues.get("duplicate_guids"):
-            rows = "".join([f"<tr><td>{d['guid']}</td><td>{d['count']}</td><td>{', '.join(map(str, d['ids']))}</td></tr>" for d in self.issues["duplicate_guids"]])
+            rows = "".join([f"<tr><td>{html.escape(str(d['guid']))}</td><td>{d['count']}</td><td>{', '.join(map(str, d['ids']))}</td></tr>" for d in self.issues["duplicate_guids"]])
             issues_html += f"<div class='section'><h2>Duplicate GUIDs ({len(self.issues['duplicate_guids'])})</h2><table><thead><tr><th>GUID</th><th>Count</th><th>Elements (IDs)</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Empty PSets
         if self.issues.get("empty_psets"):
-            rows = "".join([f"<tr><td>{p['id']}</td><td>{p['name']}</td><td>{p['type']}</td></tr>" for p in self.issues["empty_psets"][:50]])
+            rows = "".join([f"<tr><td>{p['id']}</td><td>{html.escape(str(p['name']))}</td><td>{html.escape(str(p['type']))}</td></tr>" for p in self.issues["empty_psets"][:50]])
             issues_html += f"<div class='section'><h2>Empty PSets ({self._get_issue_count('empty_psets')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Unused Types
         if self.issues.get("unused_types"):
-            rows = "".join([f"<tr><td>{t['id']}</td><td>{t['name']}</td><td>{t['type']}</td></tr>" for t in self.issues["unused_types"][:50]])
+            rows = "".join([f"<tr><td>{t['id']}</td><td>{html.escape(str(t['name']))}</td><td>{html.escape(str(t['type']))}</td></tr>" for t in self.issues["unused_types"][:50]])
             issues_html += f"<div class='section'><h2>Unused Types ({self._get_issue_count('unused_types')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Missing Properties
         if self.issues.get("missing_properties"):
             rows = ""
             for group in self.issues["missing_properties"]:
-                rows += f"<tr style='background: #f1f5f9; font-weight: bold;'><td colspan='4'>Required: {group['property']}</td></tr>"
+                rows += f"<tr style='background: #f1f5f9; font-weight: bold;'><td colspan='4'>Required: {html.escape(str(group['property']))}</td></tr>"
                 for o in group["elements"][:20]:
-                    rows += f"<tr><td>{o['id']}</td><td>{o['name']}</td><td>{o['type']}</td><td><span class='badge error'>Missing</span></td></tr>"
+                    rows += f"<tr><td>{o['id']}</td><td>{html.escape(str(o['name']))}</td><td>{html.escape(str(o['type']))}</td><td><span class='badge error'>Missing</span></td></tr>"
             issues_html += f"<div class='section'><h2>Missing Properties ({self._get_issue_count('missing_properties')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
         # Heavy BRep
@@ -144,7 +145,7 @@ class HTMLReporter:
                 elif "Medium" in g['group']: level_class = "medium"
                 
                 for e in g.get("elements", [])[:10]:
-                    rows += f"<tr><td>{e['id']}</td><td>{e['name']}</td><td>{e['faces']}</td><td><span class='badge {level_class}'>{g['group']}</span></td></tr>"
+                    rows += f"<tr><td>{e['id']}</td><td>{html.escape(str(e['name']))}</td><td>{e['faces']}</td><td><span class='badge {level_class}'>{html.escape(str(g['group']))}</span></td></tr>"
             
             issues_html += f"<div class='section'><h2>Heavy BRep ({self._get_issue_count('heavy_brep')})</h2><table><thead><tr><th>ID</th><th>Name</th><th>Faces</th><th>Complexity</th></tr></thead><tbody>{rows}</tbody></table></div>"
 
@@ -154,7 +155,7 @@ class HTMLReporter:
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>IFC Audit Report - {self.summary.get('file', 'Model')}</title>
+            <title>IFC Audit Report - {html.escape(str(self.summary.get('file', 'Model')))}</title>
             <style>{css}</style>
         </head>
         <body>
@@ -162,7 +163,7 @@ class HTMLReporter:
                 <header>
                     <div>
                         <h1>IFC Audit Report</h1>
-                        <div class="timestamp">File: {self.summary.get('file', 'Model')} | Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
+                        <div class="timestamp">File: {html.escape(str(self.summary.get('file', 'Model')))} | Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
                     </div>
                     <div>
                         <span class="badge" style="background: var(--primary); color: white;">v0.2.1</span>

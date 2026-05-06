@@ -6,7 +6,7 @@ class IFCIssueItem(bpy.types.PropertyGroup):
     name: bpy.props.StringProperty(default="")
     issue_type: bpy.props.StringProperty(default="")
     description: bpy.props.StringProperty(default="")
-    payload_json: bpy.props.StringProperty(default="")
+    payload_index: bpy.props.IntProperty(default=-1)
     is_group: bpy.props.BoolProperty(default=False)
     is_expanded: bpy.props.BoolProperty(default=False)
     parent_id: bpy.props.IntProperty(default=-1)
@@ -20,7 +20,7 @@ class IFCAuditorProperties(bpy.types.PropertyGroup):
     )
     filepath: bpy.props.StringProperty(name="IFC File Path", subtype='FILE_PATH', default="")
     status: bpy.props.StringProperty(name="Status", default="Ready")
-    audit_cache: bpy.props.StringProperty(name="Resultados JSON", default="")
+    has_audit_cache: bpy.props.BoolProperty(name="Tiene Caché", default=False)
     issue_filter: bpy.props.EnumProperty(
         name="Filter",
         items=[
@@ -46,6 +46,9 @@ class IFCAuditorProperties(bpy.types.PropertyGroup):
 
     clean_empty_psets: bpy.props.BoolProperty(name="Remove empty PropertySets", default=True)
     clean_unused_types: bpy.props.BoolProperty(name="Remove unused types", default=True)
+
+AUDIT_CACHE = {}
+UI_FLAT_LIST = []
 
 classes = [IFCIssueItem, IFCAuditorProperties]
 

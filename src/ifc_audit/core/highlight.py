@@ -3,7 +3,7 @@ from __future__ import annotations
 # by AGR Digital Building (https://agrdb.com)
 import bpy
 
-_ORIGINAL_MATERIALS: dict[str, list] = {}
+_ORIGINAL_MATERIALS: dict[int, tuple[bpy.types.Object, list]] = {}
 _MATERIAL_NAMES = {
     "ghost": "IFC_AUDITOR_GHOST",
     "orphans": "IFC_AUDITOR_ORPHANS",
@@ -85,14 +85,22 @@ def _highlight_color_for_issue(issue_type: str, prefs, payload: dict | None = No
 
 def restore_visual():
     global _ORIGINAL_MATERIALS
-    for obj_name, mats in list(_ORIGINAL_MATERIALS.items()):
-        obj = bpy.data.objects.get(obj_name)
-        if obj is None or getattr(obj, "data", None) is None or not hasattr(obj.data, "materials"):
-            continue
-        obj.data.materials.clear()
-        for mat in mats:
-            obj.data.materials.append(mat)
+    for ptr, (obj, mats) in list(_ORIGINAL_MATERIALS.items()):
+        try:
+            if obj is None or getattr(obj, "data", None) is None or not hasattr(obj.data, "materials"):
+                continue
+            obj.data.materials.clear()
+            for mat in mats:
+                obj.data.materials.append(mat)
+        except ReferenceError:
+            pass
     _ORIGINAL_MATERIALS.clear()
+    
+    # Remove generated ghost materials if they have no other users
+    for mat_name in _MATERIAL_NAMES.values():
+        mat = bpy.data.materials.get(mat_name)
+        if mat and getattr(mat, "users", 0) == 0:
+            bpy.data.materials.remove(mat)
 
 def apply_ghost_highlight(context, active_objects, issue_type: str, prefs, payload: dict | None = None):
     global _ORIGINAL_MATERIALS
@@ -114,7 +122,18 @@ def apply_ghost_highlight(context, active_objects, issue_type: str, prefs, paylo
         if obj.type != 'MESH' or getattr(obj, "data", None) is None or not hasattr(obj.data, "materials"):
             continue
 
-        _ORIGINAL_MATERIALS[obj.name] = [slot.material for slot in obj.material_slots]
+        # Check if the object is likely an IFC object
+        is_ifc = False
+        if "BIMObjectProperties" in obj or obj.get("IfcClass") is not None:
+            is_ifc = True
+        elif obj.parent and (obj.parent.get("IfcClass") is not None or "BIMObjectProperties" in obj.parent):
+            is_ifc = True
+            
+        if not is_ifc and obj not in active_set:
+            continue
+
+        ptr = obj.as_pointer()
+        _ORIGINAL_MATERIALS[ptr] = (obj, [slot.material for slot in obj.material_slots])
         obj.data.materials.clear()
 
         if obj in active_set:
